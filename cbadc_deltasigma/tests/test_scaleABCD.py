@@ -96,6 +96,14 @@ class TestScaleABCD(unittest.TestCase):
         self.assertTrue(0.7 < umax < 0.9)
         self.assertTrue(np.allclose(np.diag(S), self.Sdiag_ref, atol=1e-2, rtol=25e-1))
 
+        # Scaling changes state coordinates, not the modulator's readout.
+        u = 0.2 * np.sin(2 * np.pi * self.f0 * np.arange(128))
+        v0, x0, _, y0 = ds.simulateDSM(u, self.ABCD0, self.nlev)
+        v1, x1, _, y1 = ds.simulateDSM(u, ABCD, self.nlev)
+        np.testing.assert_array_equal(v1, v0)
+        np.testing.assert_allclose(x1, S @ x0, atol=1e-10)
+        np.testing.assert_allclose(y1, y0, atol=1e-10)
+
     def test_scaleABCD_Q(self):
         """Test function for scaleABCD() with Imag ABCD"""
         ABCD_IN = np.array(
