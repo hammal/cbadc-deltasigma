@@ -1,6 +1,8 @@
 # Publishing cbadc-deltasigma
 
-The release workflow builds and tests the package, then uploads to PyPI through Trusted Publishing. No PyPI token is stored in GitHub.
+The release workflow tests Python 3.11–3.15 on Linux, macOS, and Windows,
+builds the package, then uploads to PyPI through Trusted Publishing. No PyPI
+token is stored in GitHub.
 
 ## One-time setup
 
