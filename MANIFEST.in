@@ -1,1 +1,3 @@
-recursive-include deltasigma *.pyx *.px[di]
+include LICENSE README.md
+recursive-include cbadc_deltasigma/tests *.py *.mat *.txt
+prune tests
