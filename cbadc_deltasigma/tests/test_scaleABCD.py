@@ -91,10 +91,18 @@ class TestScaleABCD(unittest.TestCase):
         # this is a rather high relative error. We get it on Travis-CI
         # Probably related to the libs used?
         self.assertTrue(np.allclose(ABCD, self.ABCD_ref, atol=1e-2, rtol=30e-2))
-        # The stability threshold is found by a noisy simulation and varies
-        # slightly with NumPy and BLAS versions.
-        self.assertTrue(0.7 < umax < 0.9, f"Estimated umax={umax:.17g}")
+        # This noisy eighth-order search estimates umax; it is not a portable
+        # numerical reference (0.8 on macOS, 0.9333 on Windows). Check its range
+        # and the exact coordinate change instead: As*S=S*A, Bs=S*B, Cs*S=C.
+        self.assertTrue(0 < umax <= self.nlev - 1, f"Estimated umax={umax:.17g}")
         self.assertTrue(np.allclose(np.diag(S), self.Sdiag_ref, atol=1e-2, rtol=25e-1))
+        self.assertTrue(np.all(np.diag(S) > 0))
+        A, B, C, D = ds.partitionABCD(self.ABCD0)
+        As, Bs, Cs, Ds = ds.partitionABCD(ABCD)
+        np.testing.assert_allclose(As @ S, S @ A, atol=1e-12)
+        np.testing.assert_allclose(Bs, S @ B, atol=1e-12)
+        np.testing.assert_allclose(Cs @ S, C, atol=1e-12)
+        np.testing.assert_array_equal(Ds, D)
 
         # Scaling changes state coordinates, not the modulator's readout.
         u = 0.2 * np.sin(2 * np.pi * self.f0 * np.arange(128))
@@ -103,6 +111,12 @@ class TestScaleABCD(unittest.TestCase):
         np.testing.assert_array_equal(v1, v0)
         np.testing.assert_allclose(x1, S @ x0, atol=1e-10)
         np.testing.assert_allclose(y1, y0, atol=1e-10)
+
+    def test_scaleABCD_first_order_stability(self):
+        """A first-order binary loop accepts full scale: x[n+1]=x[n]+u[n]-v[n]."""
+        ABCD = np.array([[1., 1., -1.], [1., 1., 0.]])
+        _, umax, _ = ds.scaleABCD(ABCD, N_sim=4096)
+        self.assertEqual(umax, 1.0)
 
     def test_scaleABCD_Q(self):
         """Test function for scaleABCD() with Imag ABCD"""
