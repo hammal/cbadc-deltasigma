@@ -13,7 +13,7 @@ token is stored in GitHub.
    | --- | --- |
    | PyPI project name | `cbadc-deltasigma` |
    | GitHub owner | `hammal` |
-   | Repository | `python-deltasigma` |
+   | Repository | `cbadc-deltasigma` |
    | Workflow filename | `release.yml` |
    | Environment name | `pypi` |
 

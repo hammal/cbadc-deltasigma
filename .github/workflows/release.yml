@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.15"
       - name: Match the release tag to the package version
         if: github.event_name == 'release'
         run: test "$GITHUB_REF_NAME" = "v$(python setup.py --version)"

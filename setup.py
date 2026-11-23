@@ -31,7 +31,7 @@ setup(
     long_description_content_type="text/markdown",
     license="BSD-2-Clause",
     keywords="delta sigma modulator simulator",
-    url="https://github.com/hammal/python-deltasigma",
+    url="https://github.com/hammal/cbadc-deltasigma",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Education",
