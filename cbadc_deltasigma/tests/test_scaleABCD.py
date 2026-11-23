@@ -93,7 +93,7 @@ class TestScaleABCD(unittest.TestCase):
         self.assertTrue(np.allclose(ABCD, self.ABCD_ref, atol=1e-2, rtol=30e-2))
         # The stability threshold is found by a noisy simulation and varies
         # slightly with NumPy and BLAS versions.
-        self.assertTrue(0.7 < umax < 0.9)
+        self.assertTrue(0.7 < umax < 0.9, f"Estimated umax={umax:.17g}")
         self.assertTrue(np.allclose(np.diag(S), self.Sdiag_ref, atol=1e-2, rtol=25e-1))
 
         # Scaling changes state coordinates, not the modulator's readout.
