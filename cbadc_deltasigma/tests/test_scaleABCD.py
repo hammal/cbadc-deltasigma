@@ -36,67 +36,18 @@ class TestScaleABCD(unittest.TestCase):
         # Optimized zero placement
         ntf = ds.synthesizeNTF(order, osr, 2, Hinf, self.f0)
         a, g, b, c = ds.realizeNTF(ntf, form)
-        # we pass b = b[0]
-        # if you use a single feed-in for the input, b may be scalar too
-        ABCD = ds.stuffABCD(a, g, b[0], c, form)
-        # now we correct b for the assert
-        # Use a single feed-in for the input
-        b = np.concatenate((np.atleast_1d(b[0]), np.zeros((max(b.shape) - 1,))))
-        self.ABCD0 = ABCD.copy()
-
-        # References
-        self.Sdiag_ref = np.array(
-            [71.9580, 51.9359, 8.2133, 6.5398, 1.9446, 1.2070, 0.4223, 0.3040]
-        )
-        ABCD_ref1 = np.array(
-            [
-                [1.0, -0.7320, 0, 0, 0, 0],
-                [0.7218, 0.4717, 0, 0, 0, 0],
-                [0, 0.1581, 1.0, -0.7357, 0, 0],
-                [0, 0.1259, 0.7962, 0.4142, 0, 0],
-                [0, 0, 0, 0.2973, 1.0, -0.9437],
-                [0, 0, 0, 0.1846, 0.6207, 0.4142],
-                [0, 0, 0, 0, 0, 0.3499],
-                [0, 0, 0, 0, 0, 0.2518],
-                [0, 0, 0, 0, 0, 0],
-            ]
-        )
-        ABCD_ref2 = np.array(
-            [
-                [0, 0, 0.0858, -0.0858],
-                [0, 0, 0.0619, 0.0428],
-                [0, 0, 0, 0.0642],
-                [0, 0, 0, 0.1835],
-                [0, 0, 0, 0.2447],
-                [0, 0, 0, 0.0581],
-                [1.0, -0.8971, 0, -0.0076],
-                [0.7197, 0.3543, 0, -0.1746],
-                [0, 3.29, 0, 0],
-            ]
-        )
-        self.ABCD_ref = np.hstack((ABCD_ref1, ABCD_ref2))
+        # A single input feed-in; feedback still reaches every state.
+        self.ABCD0 = ds.stuffABCD(a, g, b[0], c, form)
 
     def test_scaleABCD(self):
-        """Test function for scaleABCD()"""
+        """Scaling must preserve the eighth-order loop's dynamics and decisions."""
         ABCD, umax, S = ds.scaleABCD(self.ABCD0, self.nlev, self.f0)
-        # mapping the NTF to states, there is not a perfect match between
-        # the original code and the scipy version. -> rtol approx 20%
-        # if not np.allclose(ABCD, ABCD_ref, atol=1e-2, rtol=3e-1):
-        #    aerr = ABCD_ref-ABCD
-        #    rerr = 2*(ABCD_ref-ABCD)/(ABCD_ref+ABCD)
-        #    print(repr(ABCD_ref))
-        #    print(repr(ABCD))
-        #    print(aerr)
-        #    print(rerr)
-        # this is a rather high relative error. We get it on Travis-CI
-        # Probably related to the libs used?
-        self.assertTrue(np.allclose(ABCD, self.ABCD_ref, atol=1e-2, rtol=30e-2))
-        # This noisy eighth-order search estimates umax; it is not a portable
-        # numerical reference (0.8 on macOS, 0.9333 on Windows). Check its range
-        # and the exact coordinate change instead: As*S=S*A, Bs=S*B, Cs*S=C.
+        # Noisy state maxima and stability estimates vary across platforms.
+        # The coordinate change must still satisfy As*S=S*A, Bs=S*B, Cs*S=C.
         self.assertTrue(0 < umax <= self.nlev - 1, f"Estimated umax={umax:.17g}")
-        self.assertTrue(np.allclose(np.diag(S), self.Sdiag_ref, atol=1e-2, rtol=25e-1))
+        self.assertTrue(np.all(np.isfinite(S)))
         self.assertTrue(np.all(np.diag(S) > 0))
+        np.testing.assert_array_equal(S, np.diag(np.diag(S)))
         A, B, C, D = ds.partitionABCD(self.ABCD0)
         As, Bs, Cs, Ds = ds.partitionABCD(ABCD)
         np.testing.assert_allclose(As @ S, S @ A, atol=1e-12)
@@ -117,6 +68,15 @@ class TestScaleABCD(unittest.TestCase):
         ABCD = np.array([[1., 1., -1.], [1., 1., 0.]])
         _, umax, _ = ds.scaleABCD(ABCD, N_sim=4096)
         self.assertEqual(umax, 1.0)
+
+    def test_scaleABCD_first_order_state_limit(self):
+        """A first-order loop with |x|<=1 needs S=2 for the requested xlim=2."""
+        ABCD = np.array([[1., 1., -1.], [1., 1., 0.]])
+        scaled, umax, S = ds.scaleABCD(ABCD, umax=0.5, xlim=2., N_sim=4096)
+        # Finite noisy records approach, rather than exactly attain, |x|=1.
+        np.testing.assert_allclose(S, [[2.]], rtol=0.01)
+        np.testing.assert_allclose(scaled, [[1., 2., -2.], [0.5, 1., 0.]], rtol=0.01)
+        self.assertEqual(umax, 0.5)
 
     def test_scaleABCD_Q(self):
         """Test function for scaleABCD() with Imag ABCD"""
