@@ -38,9 +38,6 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.15"
-      - name: Match the release tag to the package version
-        if: github.event_name == 'release'
-        run: test "$GITHUB_REF_NAME" = "v$(python setup.py --version)"
       - run: python -m pip install build twine
       - run: python -m build
       - run: python -m twine check dist/*
@@ -49,6 +46,16 @@ jobs:
           python -m pip install dist/*.whl
           cd "$RUNNER_TEMP"
           python -c 'import cbadc_deltasigma as ds; assert ds.synthesizeNTF(3, 32) is not None'
+      - name: Match the release tag to the installed wheel version
+        if: github.event_name == 'release'
+        run: |
+          python - <<'PY'
+          import os
+          from importlib.metadata import version
+          expected = "v" + version("cbadc-deltasigma")
+          actual = os.environ["GITHUB_REF_NAME"]
+          assert actual == expected, f"Release tag {actual!r} must match {expected!r}"
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: distributions
